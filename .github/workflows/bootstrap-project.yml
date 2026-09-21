@@ -1,0 +1,37 @@
+name: Bootstrap Nabda DJ
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nabda-dj.tar.gz'
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract project archive
+        run: |
+          tar -xzf nabda-dj.tar.gz --strip-components=1             --exclude='nabda-dj/.git'             --exclude='nabda-dj/.git/*'
+          rm -f nabda-dj.tar.gz
+
+      - name: Commit project files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "deploy: import verified V7 project"
+          git push origin main
