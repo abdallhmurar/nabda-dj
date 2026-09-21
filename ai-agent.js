@@ -1,38 +1,55 @@
 (function(){
-  'use strict';
+'use strict';
+const $=id=>document.getElementById(id);
+const q=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const raf=window.requestAnimationFrame.bind(window);
 
-  /*
-    V12 STABILIZATION ROLLBACK
-    ------------------------------------------------------------
-    The experimental AI/remix overlay was harming the product:
-    - bad transitions
-    - over-aggressive automation
-    - ugly/unclear buttons
-    - sound changes that did not feel musical
+/* V12 CLEAN AI DJ BRAIN
+   الهدف: قرار نظيف: متى أطلع من الأغنية الحالية، من أين أبدأ الجاية، وكيف أنقل.
+   لا Loop عشوائي، لا Sampler عشوائي، لا تغيير شكل الأزرار، لا لعب بالصوت بدون سبب.
+*/
 
-    This file intentionally stops controlling the audio engine, buttons,
-    EQ, filters, loops, pads, sampler, and crossfader.
+const css=`
+.ai12{margin:0 0 14px;background:linear-gradient(180deg,rgba(53,215,196,.08),rgba(255,184,77,.04)),#16171d;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:12px;display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px;box-shadow:0 24px 60px -34px #000}
+@media(max-width:900px){.ai12{grid-template-columns:1fr}}
+.ai12-card{background:rgba(29,31,39,.92);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 12px;min-width:0}.ai12-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:900;letter-spacing:.7px;color:#ffb84d;margin-bottom:8px}.ai12-badge{font-family:'JetBrains Mono',monospace;font-size:.56rem;font-weight:900;letter-spacing:.55px;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:2px 7px;color:#8b8d99;background:rgba(255,255,255,.035);white-space:nowrap}.ai12-badge.on{color:#35d7c4;border-color:#35d7c4;background:rgba(53,215,196,.14)}.ai12-badge.warn{color:#ffb84d;border-color:#ffb84d;background:rgba(255,184,77,.12)}
+.ai12-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0}.ai12-row label{font-size:.68rem;color:#8b8d99;font-weight:800;white-space:nowrap}.ai12-select{min-width:140px;flex:1;background:#262832;color:#eef0f4;border:1px solid rgba(255,255,255,.15);border-radius:9px;padding:6px 8px;font-family:'Cairo',system-ui,sans-serif;font-size:.72rem}.ai12-note{font-size:.72rem;color:#9a9da8;line-height:1.55;unicode-bidi:plaintext}.ai12-note b{color:#eef0f4}
+.ai12-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.ai12-metric{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px;min-width:0}.ai12-metric .k{font-size:.59rem;color:#565964;font-family:'JetBrains Mono',monospace;letter-spacing:.4px}.ai12-metric .v{font-size:.77rem;color:#eef0f4;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;unicode-bidi:plaintext}.ai12-decision{font-size:.76rem;color:#eef0f4;font-weight:800;line-height:1.5;unicode-bidi:plaintext}
+.ai12-steps{display:flex;flex-direction:column;gap:5px;max-height:160px;overflow:auto}.ai12-step{display:grid;grid-template-columns:64px 1fr;gap:7px;align-items:start;font-size:.69rem;color:#9a9da8;line-height:1.35;padding:6px 7px;border-radius:9px;background:rgba(255,255,255,.035)}.ai12-step strong{font-family:'JetBrains Mono',monospace;color:#35d7c4;font-size:.58rem;letter-spacing:.4px}.ai12-step.warn strong{color:#ffb84d}.ai12-step.danger strong{color:#ef4a56}
+.ai12-deck{position:absolute;top:-8px;inset-inline-start:12px;z-index:3;font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:900;letter-spacing:.6px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:#16171d;color:#565964}.deck{position:relative}.ai12-deck.live-a{color:#35d7c4;border-color:#35d7c4}.ai12-deck.live-b{color:#ef4a56;border-color:#ef4a56}.ai12-deck.next{color:#ffb84d;border-color:#ffb84d}.ai12-deck.mix{color:#ffb84d;border-color:#ffb84d;background:rgba(255,184,77,.12)}
+.nextmix-btn-execute:after{content:' اختياري';font-size:.56rem;color:#8b8d99}
+`;
 
-    The original V7/Vercel app remains in control. This is the safe baseline
-    before rebuilding a proper remix engine inside the core audio code instead
-    of patching the UI from an external overlay.
-  */
-
-  const log = '[Nabda DJ] V12 stabilization active: experimental AI overlay disabled.';
-  try { console.info(log); } catch (e) {}
-
-  function addStabilityNote(){
-    if (document.getElementById('stabilityNote')) return;
-    const header = document.querySelector('.topbar') || document.body;
-    const box = document.createElement('div');
-    box.id = 'stabilityNote';
-    box.style.cssText = 'font-family:Cairo,system-ui,sans-serif;font-size:12px;line-height:1.45;color:#8b8d99;max-width:360px;text-align:right;opacity:.9';
-    box.textContent = 'تم إيقاف طبقة الريمكس التجريبية مؤقتًا. الصوت والأزرار رجعوا للوضع المستقر قبل إعادة بناء محرك DJ حقيقي.';
-    try { header.appendChild(box); } catch (e) {}
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addStabilityNote);
-  else addStabilityNote();
-
-  window.__nabdaStabilized = true;
+const profiles={clean:'Clean DJ: يبدأ الجاية من مكان مناسب ويطلع الحالية من نهاية موسيقية نظيفة.',club:'Club DJ: يحافظ على الطاقة ويُفضل drop/build-up وBass Swap.',safe:'Safe DJ: يتجنب الغناء فوق الغناء وينتظر نقاط آمنة.',fast:'Fast DJ: يقلل الانتظار الطويل لكن بدون دخول عشوائي.'};
+const S={profile:'clean',steps:[],sig:'',lastLog:'',lastClick:0,installed:false,lastDecision:null};
+function dbg(){return window.__djDebug||null}
+function au(){const d=dbg();return d&&d.autoDj&&d.autoDj.state?d.autoDj.state:null}
+function decks(){const d=dbg();return d&&d.decks?d.decks:{}}
+function now(){const d=dbg();return d&&typeof d.now==='function'?(d.now()||0):0}
+function deck(k){return decks()[k]||null}
+function meta(k){const d=deck(k);return d&&d.meta?d.meta:null}
+function tr(k){const m=meta(k);return m?m.track:null}
+function elapsed(k){const d=dbg(),m=meta(k);if(!d||!m||typeof d.elapsed!=='function')return 0;try{return d.elapsed(m,now())}catch(e){return 0}}
+function dur(t){return t&&(t.duration||(t.audioBuffer&&t.audioBuffer.duration))||180}
+function bpm(t){return t&&(t.bpm||t.effectiveBpm)||120}
+function bar(t){return 60/Math.max(60,bpm(t))*4}
+function camelot(t){return t&&t.key&&t.key.camelot?t.key.camelot:'?'}
+function secs(t){return t&&t.structure&&Array.isArray(t.structure.sections)?t.structure.sections:[]}
+function voc(t,a,b){const c=t&&Array.isArray(t.vocalCurve)?t.vocalCurve:[];if(!c.length)return .35;let s=0,n=0;for(const it of c){const time=typeof it==='number'?n:(it.time??it.t??n);const v=typeof it==='number'?it:(it.value??it.v??it.presence??0);if(time>=a&&time<=b){s+=+v||0;n++}}return n?s/n:.35}
+function sc(label){label=String(label||'');if(label==='drop')return 100;if(label==='intro-hot')return 86;if(label.includes('buildup'))return 82;if(label.includes('chorus'))return 76;if(label.includes('verse'))return 48;if(label.includes('breakdown'))return 28;if(label.includes('intro'))return 20;if(label.includes('outro'))return 8;return 42}
+function bestEntry(t){if(!t)return{pos:0,label:'start',score:0};const D=dur(t);let best={pos:0,label:'start',score:10};for(const s of secs(t)){if(!s||!isFinite(s.start)||s.start<4||s.start>D-20)continue;let score=sc(s.label)+(isFinite(s.energy)?s.energy:0.5)*14-voc(t,s.start,Math.min(s.end||s.start+8,s.start+12))*10;if(S.profile==='club'&&(s.label==='drop'||String(s.label).includes('buildup')))score+=14;if(S.profile==='safe'&&voc(t,s.start,s.start+8)>.55)score-=20;if(score>best.score)best={pos:s.start,label:s.label||'section',score}}
+ const p=t.phrases||{},arr=[...(p.phrases32||[]),...(p.phrases16||[]),...(p.phrases8||[])];for(const x of arr){const tt=typeof x==='number'?x:(x&&(x.time||x.start));if(!isFinite(tt)||tt<8||tt>D-20)continue;const score=55+(tt>20?8:0)-voc(t,tt,tt+8)*8;if(score>best.score&&best.score<80)best={pos:tt,label:'phrase',score}}return best}
+function exits(t,el){if(!t)return[{time:el+16,label:'safe bar',score:0}];const bl=bar(t),min=(S.profile==='fast'?4:8)*bl,max=(S.profile==='safe'?24:S.profile==='club'?16:20)*bl,from=el+min,to=Math.min(dur(t)-8,el+max),out=[];const p=t.phrases||{},arr=[...(p.phrases32||[]),...(p.phrases16||[]),...(p.phrases8||[])];for(const x of arr){const tt=typeof x==='number'?x:(x&&(x.time||x.start));if(isFinite(tt)&&tt>=from&&tt<=to)out.push({time:tt,label:'phrase boundary',score:70})}for(const s of secs(t)){if(!s)continue;if(isFinite(s.start)&&s.start>=from&&s.start<=to){let score=60;if(String(s.label).includes('outro'))score+=25;if(String(s.label).includes('breakdown'))score+=12;if(voc(t,s.start,s.start+8)>.55)score-=18;out.push({time:s.start,label:s.label||'section',score})}if(isFinite(s.end)&&s.end>=from&&s.end<=to)out.push({time:s.end,label:'section end',score:68})}if(!out.length)out.push({time:Math.min(to,el+(S.profile==='fast'?8:12)*bl),label:'next safe bar',score:35});out.sort((a,b)=>b.score-a.score||a.time-b.time);return out}
+function strategy(cur,nxt,entry){const diff=Math.abs(bpm(cur)-bpm(nxt));const same=camelot(cur)!=='?'&&camelot(cur)===camelot(nxt);const lab=String(entry.label||'');if(lab==='drop'||lab.includes('buildup'))return{name:'Build-up → Bass Swap',why:'الدخول قريب من drop/build-up'};if(diff<=3&&same)return{name:'Long EQ Blend',why:'BPM والمقام متوافقين'};if(diff<=5)return{name:'Bass Swap',why:'BPM قريب ومناسب للتبديل'};if(S.profile==='safe')return{name:'EQ Blend',why:'وضع آمن'};return{name:'Filter Out + Quick Blend',why:'فرق BPM يحتاج خروج أنظف'} }
+function barsUntil(plan,k){const t=tr(k);if(!plan||!t)return null;const b=(plan.trigger-elapsed(k))/bar(t);return isFinite(b)?b:null}
+function log(l,t,kind){const id=l+':'+t;if(id===S.lastLog)return;S.lastLog=id;S.steps.unshift({l,t,kind:kind||''});S.steps=S.steps.slice(0,10);renderSteps()}
+function renderSteps(){const box=$('ai12Steps');if(!box)return;$('ai12Count')&&($('ai12Count').textContent=String(S.steps.length));box.innerHTML=S.steps.map(x=>`<div class="ai12-step ${x.kind||''}"><strong>${x.l}</strong><span>${x.t}</span></div>`).join('')}
+function install(){if(S.installed)return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);const html=`<section class="ai12" id="ai12"><div class="ai12-card"><div class="ai12-title"><span>CLEAN AI DJ BRAIN</span><span class="ai12-badge on" id="ai12Status">ANALYZING</span></div><div class="ai12-row"><label>طريقة القرار</label><select class="ai12-select" id="ai12Profile"><option value="clean" selected>Clean DJ</option><option value="club">Club DJ</option><option value="safe">Safe DJ</option><option value="fast">Fast DJ</option></select></div><div class="ai12-note" id="ai12Explain">${profiles.clean}</div></div><div class="ai12-card"><div class="ai12-title"><span>DECISION</span><span class="ai12-badge warn" id="ai12PlanBadge">WAITING</span></div><div class="ai12-metrics"><div class="ai12-metric"><div class="k">EXIT CURRENT</div><div class="v" id="ai12Exit">—</div></div><div class="ai12-metric"><div class="k">START NEXT</div><div class="v" id="ai12Entry">—</div></div><div class="ai12-metric"><div class="k">HOW</div><div class="v" id="ai12How">—</div></div><div class="ai12-metric"><div class="k">WHEN</div><div class="v" id="ai12When">—</div></div></div><div class="ai12-decision" id="ai12Decision" style="margin-top:8px">شغل Auto DJ حتى أحلل البداية والنهاية المناسبة.</div></div><div class="ai12-card"><div class="ai12-title"><span>WHY / ACTIONS</span><span class="ai12-badge" id="ai12Count">0</span></div><div class="ai12-steps" id="ai12Steps"><div class="ai12-step"><strong>READY</strong><span>أبني القرار من BPM / مقام / طاقة / vocal / بداية ونهاية.</span></div></div></div></section>`;const target=$('nextMixPanel')||document.querySelector('.mixer')||document.body;if(target&&target.parentNode)target.insertAdjacentHTML('afterend',html);[['A','.deck-a'],['B','.deck-b']].forEach(([k,s])=>{const e=q(s);if(e&&!$('ai12Deck'+k))e.insertAdjacentHTML('afterbegin',`<div class="ai12-deck" id="ai12Deck${k}">IDLE</div>`)});$('ai12Profile')?.addEventListener('change',e=>{S.profile=e.target.value;log('MODE','طريقة القرار: '+profiles[S.profile],'warn')});log('READY','V12: أعدل خطة الدخول والخروج فقط، بدون تخبيص بالصوت أو الأزرار.','warn');S.installed=true}
+function decide(){const a=au();if(!a||!a.on||a.transition||!a.nextTrack||!a.nextTrack.plan||!a.liveKey)return null;const liveKey=a.liveKey,cur=tr(liveKey),nxt=a.nextTrack.track,plan=a.nextTrack.plan;if(!cur||!nxt)return null;const ent=bestEntry(nxt),ex=exits(cur,elapsed(liveKey))[0],how=strategy(cur,nxt,ent);const sig=[cur.name,nxt.name,Math.round(ent.pos),Math.round(ex.time),how.name,S.profile].join('|');if(sig!==S.sig){S.sig=sig;log('DECIDE','الخروج من '+ex.label+'، الدخول من '+ent.label+'، انتقال '+how.name+'.','warn')}if(ent.score>=45&&Math.abs((plan.incomingOffset||0)-ent.pos)>2)plan.incomingOffset=ent.pos;const currentBars=barsUntil(plan,liveKey),wait=(ex.time-elapsed(liveKey))/bar(cur);if(isFinite(wait)&&wait>=3&&wait<=24&&(currentBars==null||Math.abs(currentBars-wait)>2))plan.trigger=ex.time;if(plan.strategy&&plan.strategy.durationBars){if(S.profile==='fast')plan.strategy.durationBars=Math.min(plan.strategy.durationBars,8);else if(S.profile==='club')plan.strategy.durationBars=Math.min(plan.strategy.durationBars,16);else plan.strategy.durationBars=Math.min(plan.strategy.durationBars,24)}return S.lastDecision={liveKey,cur,nxt,ent,ex,how,bars:barsUntil(plan,liveKey)}}
+function maybeStart(d){const a=au();if(!a||!a.on||a.transition||!d)return;const b=d.bars;if(b==null)return;if(b<=0.35&&b>=-0.75&&Date.now()-S.lastClick>4500){S.lastClick=Date.now();const btn=$('nextMixExecute');if(btn&&!btn.disabled){btn.click();log('START','بدأت الجاية تلقائيًا عند نقطة البداية المختارة.','warn')}}}
+function render(d){install();const a=au(),on=!!(a&&a.on);$('ai12Status')&&($('ai12Status').textContent=on?'AI DECIDING':'MANUAL',$('ai12Status').classList.toggle('on',on));$('ai12Profile')&&($('ai12Profile').value=S.profile);$('ai12Explain')&&($('ai12Explain').textContent=profiles[S.profile]);$('ai12PlanBadge')&&($('ai12PlanBadge').textContent=d?'PLAN LOCKED':'WAITING');if(d){$('ai12Exit')&&($('ai12Exit').textContent=d.ex.label+' @ '+Math.round(d.ex.time)+'s');$('ai12Entry')&&($('ai12Entry').textContent=d.ent.label+' @ '+Math.round(d.ent.pos)+'s');$('ai12How')&&($('ai12How').textContent=d.how.name);$('ai12When')&&($('ai12When').textContent=d.bars==null?'—':Math.max(0,Math.round(d.bars))+' bars');$('ai12Decision')&&($('ai12Decision').innerHTML='<b>AI Decision:</b> اخرج من <b>'+d.ex.label+'</b> وابدأ الجاية من <b>'+d.ent.label+'</b>. السبب: BPM '+Math.round(bpm(d.cur))+'→'+Math.round(bpm(d.nxt))+' · Key '+camelot(d.cur)+'→'+camelot(d.nxt)+' · '+d.how.why)}else{$('ai12Exit')&&($('ai12Exit').textContent='—');$('ai12Entry')&&($('ai12Entry').textContent='—');$('ai12How')&&($('ai12How').textContent='—');$('ai12When')&&($('ai12When').textContent='—');$('ai12Decision')&&($('ai12Decision').innerHTML=on?'<b>AI:</b> بانتظار أغنية تالية حتى أبني الخطة.':'<b>Manual:</b> شغل Auto DJ حتى أقرر البداية والنهاية.')}['A','B'].forEach(k=>{const e=$('ai12Deck'+k);if(!e)return;let st='IDLE';if(a&&a.transition&&(a.transition.fromKey===k||a.transition.toKey===k))st='MIX';else if(a&&a.liveKey===k)st='LIVE';else if(a&&a.nextTrack&&a.nextTrack.key===k)st='NEXT';else if(tr(k))st=meta(k)&&meta(k).playing?'PLAYING':'CUED';e.textContent=st;e.className='ai12-deck '+(st==='LIVE'?(k==='A'?'live-a':'live-b'):st==='NEXT'?'next':st==='MIX'?'mix':'')})}
+function loop(){const d=decide();maybeStart(d);render(d);raf(loop)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{install();loop()});else{install();loop()}
+window.__cleanAiDjV12={state:S,bestEntry,exits,strategy,decide};
 })();
