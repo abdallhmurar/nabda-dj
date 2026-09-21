@@ -1,40 +1,324 @@
 (function(){
   'use strict';
+
   const $ = (id) => document.getElementById(id);
+  const q = (sel) => document.querySelector(sel);
+  const nowMs = () => Date.now();
+
   const css = `
-  .agent-cockpit{margin:0 0 12px;background:linear-gradient(180deg,rgba(53,215,196,.09),rgba(239,74,86,.05)),#16171d;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:12px;display:grid;grid-template-columns:.9fr 1.15fr .95fr;gap:10px;box-shadow:0 30px 70px -30px rgba(0,0,0,.75)}
-  @media(max-width:900px){.agent-cockpit{grid-template-columns:1fr}}
-  .agent-card{background:rgba(29,31,39,.88);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 12px;min-width:0}.agent-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:800;letter-spacing:.7px;color:#ffb84d;margin-bottom:8px}.agent-badge{font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:800;letter-spacing:.6px;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:2px 7px;color:#8b8d99;background:rgba(255,255,255,.035);white-space:nowrap}.agent-badge.on{color:#35d7c4;border-color:#35d7c4;background:rgba(53,215,196,.15)}
-  .agent-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0}.agent-row label{font-size:.68rem;color:#8b8d99;font-weight:700;white-space:nowrap}.agent-select{min-width:130px;flex:1;background:#262832;color:#eef0f4;border:1px solid rgba(255,255,255,.15);border-radius:9px;padding:6px 8px;font-family:'Cairo',system-ui,sans-serif;font-size:.72rem}.agent-row input[type=range]{flex:1}.agent-pill{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:#35d7c4;min-width:42px;text-align:left}.agent-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}.agent-metric{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px;min-width:0}.agent-metric .k{font-size:.62rem;color:#565964;font-family:'JetBrains Mono',monospace;letter-spacing:.4px}.agent-metric .v{font-size:.78rem;color:#eef0f4;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;unicode-bidi:plaintext}.agent-reason{font-size:.72rem;color:#8b8d99;line-height:1.55;unicode-bidi:plaintext}.agent-reason b{color:#eef0f4}.agent-actions{display:flex;flex-direction:column;gap:5px;max-height:145px;overflow:auto}.agent-action{display:grid;grid-template-columns:54px 1fr;gap:7px;align-items:start;font-size:.69rem;color:#8b8d99;line-height:1.35;padding:6px 7px;border-radius:8px;background:rgba(255,255,255,.032)}.agent-action strong{font-family:'JetBrains Mono',monospace;color:#35d7c4;font-size:.58rem;letter-spacing:.4px}.agent-action.warn strong{color:#ffb84d}.agent-action.danger strong{color:#ef4a56}.agent-ai-mark{box-shadow:0 0 0 1px #ffb84d,0 0 18px rgba(255,184,77,.22)!important;border-color:#ffb84d!important;filter:brightness(1.18)}
-  .agent-deck-badge{position:absolute;top:-8px;inset-inline-start:12px;z-index:2;font-family:'JetBrains Mono',monospace;font-size:.56rem;font-weight:900;letter-spacing:.6px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:#16171d;color:#565964}.deck{position:relative}.agent-deck-badge.live-a{color:#35d7c4;border-color:#35d7c4}.agent-deck-badge.live-b{color:#ef4a56;border-color:#ef4a56}.agent-deck-badge.next{color:#ffb84d;border-color:#ffb84d}`;
-  const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
-  function html(){return `<section class="agent-cockpit" id="agentCockpit"><div class="agent-card"><div class="agent-title"><span>AI DJ AGENT</span><span class="agent-badge" id="agentBadge">STANDBY</span></div><div class="agent-row"><label>الشخصية</label><select class="agent-select" id="agentMode"><option value="smooth">Smooth DJ</option><option value="club">Club DJ</option><option value="creative" selected>Creative DJ</option><option value="safe">Safe DJ</option></select></div><div class="agent-row"><label>تحكم البوت</label><input type="range" id="agentLevel" min="0" max="100" step="5" value="100"><span class="agent-pill" id="agentLevelText">100%</span></div><div class="agent-reason" id="agentModeExplain">تحكم كامل بكل الديكات، الفيدرز، EQ، FX، Loops، Pads، والـSampler حسب الموسيقى.</div></div><div class="agent-card"><div class="agent-title"><span>AI BRAIN</span><span class="agent-badge on" id="agentBrainBadge">FULL CONTROL</span></div><div class="agent-metrics"><div class="agent-metric"><div class="k">LIVE</div><div class="v" id="agentLive">—</div></div><div class="agent-metric"><div class="k">NEXT</div><div class="v" id="agentNext">—</div></div><div class="agent-metric"><div class="k">STRATEGY</div><div class="v" id="agentStrategy">—</div></div><div class="agent-metric"><div class="k">ARC</div><div class="v" id="agentArc">—</div></div></div><div class="agent-reason" id="agentReason" style="margin-top:8px">اضغط AI TAKE OVER وأنا بمسك الجهاز كاملًا.</div></div><div class="agent-card"><div class="agent-title"><span>AI ACTIONS</span><span class="agent-badge" id="agentActionCount">0</span></div><div class="agent-actions" id="agentActions"><div class="agent-action"><strong>READY</strong><span>جاهز أستلم كل شيء.</span></div></div></div></section>`}
-  const next=document.getElementById('nextMixPanel')||document.querySelector('.mixer'); if(next){next.insertAdjacentHTML('afterend',html());}
-  [['A','.deck-a'],['B','.deck-b']].forEach(([k,sel])=>{const d=document.querySelector(sel); if(d&&!document.getElementById('agentDeck'+k)){d.insertAdjacentHTML('afterbegin',`<div class="agent-deck-badge" id="agentDeck${k}">IDLE</div>`);}});
-  const profiles={smooth:'انتقالات طويلة وناعمة، FX قليل، تغييرات طاقة تدريجية.',club:'Bass swap أوضح، Drop swaps أكثر، طاقة أعلى.',creative:'تحكم كامل: لووبات، سامبلر من نفس الأغنية، FX، Hot Cues، وBass swaps حسب الموسيقى.',safe:'أقل مخاطرة: يتجنب تصادم الغناء، FX محدود، انتقالات مضمونة.'};
-  let mode='creative', level=100, actions=[], lastTransitionKey='', armedCreative=false;
-  function dbg(){return window.__djDebug||null} function auto(){const d=dbg(); return d&&d.autoDj&&d.autoDj.state?d.autoDj.state:null}
-  function log(label,text,kind){actions.unshift({label,text,kind:kind||''}); actions=actions.slice(0,9); renderActions();}
-  function renderActions(){const box=$('agentActions'); if(!box)return; $('agentActionCount').textContent=String(actions.length); box.innerHTML=actions.map(a=>`<div class="agent-action ${a.kind}"><strong>${a.label}</strong><span>${a.text}</span></div>`).join('')||'<div class="agent-action"><strong>READY</strong><span>جاهز.</span></div>';}
-  function mark(el){if(!el)return; el.classList.add('agent-ai-mark'); clearTimeout(el.__agentMark); el.__agentMark=setTimeout(()=>el.classList.remove('agent-ai-mark'),800)}
-  function setRange(id,val){const el=$(id); if(!el)return; el.value=String(val); el.dispatchEvent(new Event('input',{bubbles:true})); mark(el)}
-  function click(id){const el=$(id); if(el&&!el.disabled){mark(el); el.click();}}
-  function setEq(k,band,val){setRange((band==='high'?'eqHi':band==='mid'?'eqMid':band==='low'?'eqLow':'color')+k,val)}
-  function fx(k,name){const d=dbg(); if(d&&d.actions){d.actions.toggleFx(k,name); mark((k==='A'?$('padsA'):$('padsB')));}}
-  function loop(k,beats){const d=dbg(); if(d&&d.actions){d.actions.toggleLoopSize(k,beats||4); mark((k==='A'?$('padsA'):$('padsB')));}}
-  function sampler(k,action,index){const d=dbg(); if(!d||!d.actions)return; d.actions.setPadMode(k,'sampler'); if(action==='capture')d.actions.samplerAction(k,index||0); if(action==='play'){const slot=d.decks[k].samplerSlots[index||0]; if(slot) { const src=d.actions.samplerAction(k,index||0); }} mark(k==='A'?$('padsA'):$('padsB'));}
-  function statusFor(k,a,d){if(a&&a.liveKey===k&&a.transition)return'MIXING'; if(a&&a.liveKey===k)return'LIVE'; if(a&&a.nextTrack&&a.nextTrack.key===k)return'NEXT'; const m=d&&d.decks&&d.decks[k]&&d.decks[k].meta; return m?(m.playing?'PLAYING':'CUED'):'IDLE'}
-  function deckName(d,k){const m=d&&d.decks&&d.decks[k]&&d.decks[k].meta; return m&&m.track?m.track.name:'—'}
-  function actOnTransition(a,d){if(!a||!a.transition||level<75)return; const t=a.transition; const key=t.fromKey+'>'+t.toKey+':'+Math.round(t.startedAt||0); if(key!==lastTransitionKey){lastTransitionKey=key; armedCreative=false; log('MIX','AI يمسك الفيدرز والـEQ والفلتر أثناء الانتقال من Deck '+t.fromKey+' إلى '+t.toKey+'.','warn')}
-    const dur=Math.max(.5,t.duration||1); const p=Math.max(0,Math.min(1,((d.now?d.now():0)-(t.startedAt||0))/dur));
-    if(mode==='club'||mode==='creative'){setEq(t.fromKey,'filter',-p*(mode==='creative'?0.7:0.45)); setEq(t.toKey,'filter',Math.max(0,(1-p)*0.22));}
-    if(mode==='creative'&&level>=100&&!armedCreative&&p>.18){armedCreative=true; try{sampler(t.fromKey,'capture',0); log('PAD','أخذت سامبل قصير من نفس الأغنية لاستخدامه كـfill إبداعي.','warn'); setTimeout(()=>{if(auto()&&auto().on){sampler(t.fromKey,'play',0); log('PAD','شغّلت السامبل أثناء الميكس.')}},Math.max(700,dur*330));}catch(e){}}
-    if(mode==='club'&&p>.55&&p<.62){fx(t.fromKey,'echo'); log('FX','Echo خفيف للخروج بنظافة.','warn')}
+    .dance-lock-note{margin:8px 0 0;color:#35d7c4;font-size:.72rem;line-height:1.5;unicode-bidi:plaintext}
+    .dance-lock-note b{color:#ffb84d}
+    .ai-dance-mark{box-shadow:0 0 0 1px #ffb84d,0 0 18px rgba(255,184,77,.30)!important;border-color:#ffb84d!important;filter:brightness(1.2)}
+    .nextmix[data-autopilot="full"] .nextmix-badge::after{content:" · AUTO";color:#35d7c4}
+    .nextmix[data-autopilot="full"] .nextmix-btn-execute{background:rgba(53,215,196,.22);border-color:#35d7c4;color:#35d7c4}
+  `;
+  const style = document.createElement('style');
+  style.textContent = css;
+  document.head.appendChild(style);
+
+  const MODE = {
+    smooth:   { minDwell: 70, maxEnergyDrop: .13, maxBlend: 34, lookahead: 999, filter: .35, sampler: false, loop: false },
+    club:     { minDwell: 38, maxEnergyDrop: .07, maxBlend: 24, lookahead: 999, filter: .62, sampler: true,  loop: true  },
+    creative: { minDwell: 30, maxEnergyDrop: .11, maxBlend: 26, lookahead: 999, filter: .78, sampler: true,  loop: true  },
+    safe:     { minDwell: 85, maxEnergyDrop: .03, maxBlend: 22, lookahead: 999, filter: .20, sampler: false, loop: false },
+  };
+
+  const state = {
+    forcedOnce: false,
+    lastPreparedSig: '',
+    lastRejectedAt: 0,
+    rejectCountBySig: Object.create(null),
+    lastExecuteSig: '',
+    lastExecuteAt: 0,
+    lastFeatureSig: '',
+    lastLoopSig: '',
+    lastDancePulse: 0,
+  };
+
+  function dbg(){ return window.__djDebug || null; }
+  function auto(){ const d = dbg(); return d && d.autoDj && d.autoDj.state ? d.autoDj.state : null; }
+  function log(label, text, kind){
+    const d = dbg();
+    try {
+      if (d && d.controlBus && d.controlBus.log) d.controlBus.log(label, text, kind || 'warn');
+      const box = $('aiActions');
+      const count = $('aiActionCount');
+      if (box) {
+        const item = document.createElement('div');
+        item.className = 'ai-action ' + (kind || 'warn');
+        item.innerHTML = '<strong>' + label + '</strong><span>' + text + '</span>';
+        box.insertBefore(item, box.firstChild);
+        while (box.children.length > 9) box.removeChild(box.lastChild);
+        if (count) count.textContent = String(box.children.length);
+      }
+    } catch(e) {}
   }
-  function render(){const d=dbg(),a=auto(); const on=!!(a&&a.on); const badge=$('agentBadge'); if(badge){badge.textContent=on?'ACTIVE':'STANDBY'; badge.classList.toggle('on',on)} const brain=$('agentBrainBadge'); if(brain){brain.textContent=level>=75?'FULL CONTROL':level>=50?'CONFIRM MODE':level>=25?'SUGGEST ONLY':'MANUAL'; brain.classList.toggle('on',level>=75)} if($('agentLevelText'))$('agentLevelText').textContent=level+'%'; if($('agentModeExplain'))$('agentModeExplain').textContent=profiles[mode]||profiles.creative; if($('agentLive'))$('agentLive').textContent=a&&a.liveKey?('Deck '+a.liveKey+' · '+deckName(d,a.liveKey)):'—'; if($('agentNext'))$('agentNext').textContent=a&&a.nextTrack?('Deck '+a.nextTrack.key+' · '+a.nextTrack.track.name):(a&&a.idleKey?'Deck '+a.idleKey:'—'); if($('agentStrategy'))$('agentStrategy').textContent=a&&a.nextTrack&&a.nextTrack.plan?a.nextTrack.plan.strategy.name:(a&&a.transition?a.transition.strategy.name:mode.toUpperCase()); if($('agentArc'))$('agentArc').textContent=a&&a.arc?a.arc.phase:'—'; if($('agentReason'))$('agentReason').innerHTML=on?'<b>AI مستلم:</b> أراقب BPM، المقام، الطاقة، الغناء، الباص، والـphrase boundaries وأتحكم بالـUI نفسه.':'<b>Manual:</b> اضغط AI TAKE OVER حتى أستلم.'; ['A','B'].forEach(k=>{const el=$('agentDeck'+k); if(!el)return; const st=statusFor(k,a,d); el.textContent=st; el.className='agent-deck-badge '+(st==='LIVE'||st==='MIXING'?(k==='A'?'live-a':'live-b'):st==='NEXT'?'next':'')}); actOnTransition(a,d); requestAnimationFrame(render)}
-  $('agentMode')&&$('agentMode').addEventListener('change',e=>{mode=e.target.value; log('MODE','شخصية البوت: '+mode+'.','warn')});
-  $('agentLevel')&&$('agentLevel').addEventListener('input',e=>{level=parseInt(e.target.value,10)||0; log('LEVEL','مستوى التحكم الآن '+level+'%.',level>=75?'warn':'')});
-  const btn=$('autoDjBtn'); if(btn){btn.textContent='AI TAKE OVER'; btn.addEventListener('click',()=>{setTimeout(()=>{const a=auto(); if(a&&a.on)log('ON','AI DJ Agent استلم الجهاز كاملًا: Decks / EQ / FX / Loops / Pads.','warn'); else log('MANUAL','TAKE CONTROL: أوقفت كل الأتمتة وتركت الصوت والقيم كما هي.','danger')},60)},{capture:true});}
-  window.__agentTakeover={setMode:m=>{mode=m;},setLevel:v=>{level=v;},log,click,setEq,fx,loop,sampler};
-  render();
+  function mark(el){ if (!el) return; el.classList.add('ai-dance-mark'); clearTimeout(el.__danceMark); el.__danceMark = setTimeout(() => el.classList.remove('ai-dance-mark'), 900); }
+  function setUiText(id, html){ const el=$(id); if(el) el.innerHTML = html; }
+  function modeOf(a){ return (a && a.mode) || (($('aiMode') && $('aiMode').value) || 'club'); }
+  function cfg(a){ return MODE[modeOf(a)] || MODE.club; }
+
+  function setSlider(id, value){
+    const el = $(id); if (!el) return;
+    el.value = String(value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    mark(el);
+  }
+  function setEq(key, band, value){
+    const d = dbg();
+    try {
+      if (d && d.actions && d.actions.setEq && band !== 'filter') d.actions.setEq(key, band, value);
+      if (d && d.actions && d.actions.setColorFilter && band === 'filter') d.actions.setColorFilter(key, value);
+    } catch(e) {}
+    const suffix = band === 'high' ? 'Hi' : band === 'mid' ? 'Mid' : band === 'low' ? 'Low' : null;
+    if (suffix) setSlider('eq' + suffix + key, value);
+    if (band === 'filter') setSlider('color' + key, value);
+  }
+  function setPadMode(key, mode){
+    const d = dbg();
+    try { if (d && d.actions && d.actions.setPadMode) d.actions.setPadMode(key, mode); } catch(e) {}
+    mark($('pads' + key)); mark($('padTabs' + key));
+  }
+  function sampler(key, index){
+    const d = dbg();
+    try { if (d && d.actions && d.actions.samplerAction) d.actions.samplerAction(key, index || 0); } catch(e) {}
+    mark($('pads' + key));
+  }
+  function loop(key, beats){
+    const d = dbg();
+    try { if (d && d.actions && d.actions.toggleLoopSize) d.actions.toggleLoopSize(key, beats || 4); } catch(e) {}
+    mark($('pads' + key));
+  }
+  function fx(key, name){
+    const d = dbg();
+    try { if (d && d.actions && d.actions.toggleFx) d.actions.toggleFx(key, name || 'echo'); } catch(e) {}
+    mark($('pads' + key));
+  }
+
+  function deckMeta(d, key){ return d && d.decks && d.decks[key] ? d.decks[key].meta : null; }
+  function elapsedOf(d, meta){ try { return d && d.elapsed && meta ? d.elapsed(meta, d.now()) : 0; } catch(e){ return 0; } }
+  function trackEnergy(t){
+    if (!t) return .5;
+    if (typeof t.energy === 'number') return t.energy;
+    if (t.structure && t.structure.loudness && isFinite(t.structure.loudness.rms)) return Math.max(0, Math.min(1, t.structure.loudness.rms * 8));
+    if (isFinite(t.loudnessDb)) return Math.max(0, Math.min(1, (t.loudnessDb + 40) / 30));
+    return .5;
+  }
+  function trackDuration(t){ return (t && (t.duration || (t.buffer && t.buffer.duration))) || 0; }
+  function niceName(t){ return t && t.name ? t.name : '—'; }
+
+  function nearestPhrase(track, target){
+    const ph = track && track.phrases && (track.phrases.phrases8 || track.phrases.phrases16);
+    if (!ph || !ph.length) return target;
+    let best = target, err = Infinity;
+    for (const x of ph) {
+      if (x < 4 || x > trackDuration(track) - 24) continue;
+      const e = Math.abs(x - target);
+      if (e < err) { err = e; best = x; }
+    }
+    return best;
+  }
+
+  function hotMixOffset(track){
+    const dur = trackDuration(track);
+    if (!track || dur < 55) return 0;
+    const sections = (track.structure && track.structure.sections) || [];
+    const preferred = sections.find(s => s.start > 8 && s.start < dur - 30 && ['drop','intro-hot','buildup'].includes(s.label));
+    if (preferred) return nearestPhrase(track, preferred.start);
+    const energetic = sections
+      .filter(s => s.start > 10 && s.start < dur - 35 && s.label !== 'outro' && s.energy)
+      .sort((a,b) => b.energy - a.energy)[0];
+    if (energetic) return nearestPhrase(track, energetic.start);
+    return nearestPhrase(track, Math.min(Math.max(14, dur * 0.18), Math.max(8, dur - 45)));
+  }
+
+  function tunePlanForDance(a, d){
+    if (!a || !a.nextTrack || !a.nextTrack.plan) return false;
+    const plan = a.nextTrack.plan;
+    const toTrack = a.nextTrack.track;
+    const c = cfg(a);
+    let changed = false;
+
+    // لا ندخل من intro بارد: نروح لأقرب نقطة طاقة/Drop/phrase مناسبة.
+    const hot = hotMixOffset(toTrack);
+    if (hot && (!plan.incomingOffset || plan.incomingOffset < hot - 2)) {
+      plan.incomingOffset = hot;
+      changed = true;
+    }
+
+    // Dance lock: ما نخلي Blend طويل يبرد الناس. نخليه Club-sized مع Bass Swap واضح.
+    if (plan.durationSeconds && plan.durationSeconds > c.maxBlend) {
+      plan.durationSeconds = c.maxBlend;
+      changed = true;
+    }
+    if (plan.strategy && (modeOf(a) === 'club' || modeOf(a) === 'creative')) {
+      if (['LONG_BLEND','EQ_BLEND','SHORT_BLEND'].includes(plan.strategy.name) && !plan.vocalCollision) {
+        plan.strategy = Object.assign({}, plan.strategy, {
+          name: 'BASS_SWAP',
+          durationBars: 16,
+          curve: 'easeInOutCubic',
+          reasons: ['dance_lock_keep_mood'].concat(plan.strategy.reasons || [])
+        });
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  function rejectEnergyDropIfNeeded(a, d){
+    if (!a || !a.nextTrack || !a.liveKey) return false;
+    const c = cfg(a);
+    const liveMeta = deckMeta(d, a.liveKey);
+    const current = liveMeta && liveMeta.track;
+    const next = a.nextTrack.track;
+    const curE = trackEnergy(current), nextE = trackEnergy(next);
+    const sig = (next && (next.id || next.name)) + ':' + a.liveKey;
+    const tooLow = nextE < curE - c.maxEnergyDrop;
+    const tries = state.rejectCountBySig[sig] || 0;
+    if (tooLow && tries < 2 && nowMs() - state.lastRejectedAt > 2500) {
+      state.rejectCountBySig[sig] = tries + 1;
+      state.lastRejectedAt = nowMs();
+      try { d.autoDj.skip(); } catch(e) { try { $('nextMixSkip').click(); } catch(_) {} }
+      log('DANCE LOCK', 'رفضت الأغنية القادمة لأنها بتنزل الطاقة أكثر من اللازم. بجيب بديل يحافظ على مود الرقص.', 'danger');
+      return true;
+    }
+    return false;
+  }
+
+  function prepareIncomingDeck(a, d){
+    if (!a || !a.nextTrack) return;
+    const sig = (a.nextTrack.track && (a.nextTrack.track.id || a.nextTrack.track.name)) + ':' + a.nextTrack.key + ':' + a.liveKey;
+    if (sig === state.lastPreparedSig) return;
+    state.lastPreparedSig = sig;
+
+    tunePlanForDance(a, d);
+    const k = a.nextTrack.key;
+    setPadMode(k, modeOf(a) === 'creative' ? 'sampler' : 'hotcue');
+    setEq(k, 'low', -0.85);
+    setEq(k, 'mid', 0.02);
+    setEq(k, 'high', 0.08);
+    setEq(k, 'filter', 0.12);
+    log('PREP', 'حضّرت Deck ' + k + ': قطعت LOW، فتحت فلتر خفيف، واخترت نقطة دخول ساخنة بدل intro بارد.', 'warn');
+  }
+
+  function autoExecuteWhenReady(a, d){
+    if (!a || !a.on || !a.nextTrack || a.transition || a.controlLevel < 75) return;
+    const liveMeta = deckMeta(d, a.liveKey);
+    if (!liveMeta || !liveMeta.playing) return;
+    const elapsed = elapsedOf(d, liveMeta);
+    const dur = trackDuration(liveMeta.track);
+    const remaining = dur ? dur - elapsed : Infinity;
+    const c = cfg(a);
+    const sig = (a.nextTrack.track && (a.nextTrack.track.id || a.nextTrack.track.name)) + ':' + a.liveKey + ':' + a.nextTrack.key;
+
+    if (elapsed < c.minDwell && remaining > 45) return;
+    if (sig === state.lastExecuteSig && nowMs() - state.lastExecuteAt < 15000) return;
+
+    tunePlanForDance(a, d);
+    state.lastExecuteSig = sig;
+    state.lastExecuteAt = nowMs();
+    log('AUTO EXEC', 'نفّذت NEXT MIX لحالي — ما بدك تضغط EXECUTE. الهدف: الناس تضل ترقص ونحافظ على نفس الطاقة.', 'warn');
+    try { d.autoDj.executeNow(); } catch(e) { try { $('nextMixExecute').click(); } catch(_) {} }
+  }
+
+  function useTransitionFeatures(a, d){
+    if (!a || !a.transition || a.controlLevel < 75) return;
+    const t = a.transition;
+    const dur = Math.max(.5, t.duration || 1);
+    const p = Math.max(0, Math.min(1, (d.now() - t.startedAt) / dur));
+    const sig = t.fromKey + '>' + t.toKey + ':' + Math.round(t.startedAt || 0);
+    const c = cfg(a);
+
+    setEq(t.fromKey, 'filter', -p * c.filter);
+    setEq(t.toKey, 'filter', Math.max(0, (1 - p) * 0.20));
+
+    if (sig !== state.lastFeatureSig) {
+      state.lastFeatureSig = sig;
+      log('FEATURES', 'الانتقال يستخدم LOW / FLT / SYNC / Crossfader، ومع Club/Creative رح يستخدم Loop/Sampler/FX حسب الحاجة.', 'warn');
+    }
+
+    if (c.loop && p > .12 && p < .18 && state.lastLoopSig !== sig) {
+      state.lastLoopSig = sig;
+      loop(t.fromKey, 4);
+      log('LOOP', 'فعّلت Loop قصير على الخارج حتى ما يصير فراغ قبل دخول الأغنية الجديدة.', 'warn');
+    }
+
+    if (c.sampler && p > .25 && p < .32 && state.lastFeatureSig === sig) {
+      // نخليه مرة واحدة لكل انتقال: capture ثم play بعد لحظة.
+      if (!state['sample_' + sig]) {
+        state['sample_' + sig] = true;
+        setPadMode(t.fromKey, 'sampler');
+        sampler(t.fromKey, 0);
+        setTimeout(() => { const aa = auto(); if (aa && aa.on && aa.transition) sampler(t.fromKey, 0); }, 650);
+        log('SAMPLER', 'أخذت Sampler من نفس الأغنية وشغلته كـfill أثناء النقلة.', 'warn');
+      }
+    }
+
+    if ((modeOf(a) === 'club' || modeOf(a) === 'creative') && p > .62 && p < .68 && !state['fx_' + sig]) {
+      state['fx_' + sig] = true;
+      fx(t.fromKey, 'echo');
+      log('FX', 'Echo Out خفيف للخروج بدون ما يبرد مود الرقص.', 'warn');
+    }
+  }
+
+  function keepDeckMoving(a, d){
+    if (!a || !a.on || a.transition || a.controlLevel < 100) return;
+    if (nowMs() - state.lastDancePulse < 6500) return;
+    const live = deckMeta(d, a.liveKey);
+    if (!live || !live.playing) return;
+    state.lastDancePulse = nowMs();
+    // حركة صغيرة مرئية فقط؛ لا نخرب الصوت. الهدف يبيّن أن البوت ماسك ومراقب.
+    mark($('eqLow' + a.liveKey)); mark($('color' + a.liveKey)); mark($('tempo' + a.liveKey));
+  }
+
+  function ensureCockpit(a, d){
+    const panel = $('nextMixPanel');
+    if (panel) panel.dataset.autopilot = 'full';
+    const exec = $('nextMixExecute');
+    if (exec) exec.textContent = 'AUTO EXECUTE';
+    const reason = $('aiReasonText') || $('agentReason');
+    if (reason) {
+      reason.innerHTML = a && a.on
+        ? '<b>Dance Lock:</b> أنا بنفذ NEXT MIX لحالي، أتجنب نزول الطاقة، أدخل من نقطة ساخنة مش intro، وأستخدم EQ/FLT/Loop/Sampler/FX وقت اللزوم.'
+        : '<b>جاهز:</b> شغّل AI TAKE OVER وأنا بمسك كل شيء أوتومات.';
+    }
+    const noteHost = $('aiCockpit') || $('agentCockpit');
+    if (noteHost && !$('danceLockNote')) {
+      noteHost.insertAdjacentHTML('beforeend','<div id="danceLockNote" class="dance-lock-note"><b>Dance Lock ON:</b> النقلة أوتومات، بدون ضغط EXECUTE، وبدون تهبيط المود.</div>');
+    }
+  }
+
+  function forceFullAutoOnce(a, d){
+    if (!a || state.forcedOnce) return;
+    state.forcedOnce = true;
+    // لأنك بدك يحافظ على الرقص، خلي البداية Club بدل Creative العشوائي.
+    a.mode = 'club';
+    a.controlLevel = 100;
+    const m = $('aiMode'); if (m) { m.value = 'club'; m.dispatchEvent(new Event('change', { bubbles:true })); }
+    const lvl = $('aiControlLevel'); if (lvl) { lvl.value = '100'; lvl.dispatchEvent(new Event('input', { bubbles:true })); }
+    log('DANCE LOCK', 'فعلت Club + Full Control: البوت ينفذ لحاله، يحافظ على الطاقة، ويستخدم الفيتشرز.', 'warn');
+  }
+
+  function tick(){
+    const d = dbg();
+    const a = auto();
+    if (d && a) {
+      forceFullAutoOnce(a, d);
+      ensureCockpit(a, d);
+      if (a.on) {
+        try { if (d.autoDj && d.autoDj.setTiming) d.autoDj.setTiming(cfg(a).lookahead, 1); } catch(e) {}
+        if (!a.transition && a.nextTrack) {
+          if (!rejectEnergyDropIfNeeded(a, d)) {
+            prepareIncomingDeck(a, d);
+            autoExecuteWhenReady(a, d);
+          }
+        }
+        useTransitionFeatures(a, d);
+        keepDeckMoving(a, d);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  tick();
 })();
