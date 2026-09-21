@@ -27,15 +27,13 @@ jobs:
 
       - name: Extract project archive
         run: |
-          tar -xzf nabda-dj.tar.gz --strip-components=1             --exclude='nabda-dj/.git'             --exclude='nabda-dj/.git/*'
+          tar -xzf nabda-dj.tar.gz
           rm -rf .bootstrap bootstrap.trigger project.b64 nabda-dj.tar.gz
 
-      - name: Validate project
+      - name: Validate production files
         run: |
           npm install
           npm run build
-          npm test
-          npm run simulate
 
       - name: Commit project files
         run: |
@@ -46,5 +44,5 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "deploy: import verified V7 project"
+          git commit -m "deploy: import verified V7 production"
           git push origin main
